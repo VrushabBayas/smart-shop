@@ -5,6 +5,16 @@ A microservices-based e-commerce application built with React, Node.js, Express,
 ## 🏗️ Architecture
 
 This project follows a microservices architecture pattern with the following components:
+A microservices-based e-commerce application built with React, Node.js, Express, and Kong API Gateway.
+
+- Frontend
+- API Gateway → routes all frontend traffic - KONG
+- User Service → authentication, registration - Express
+- Product Service → product catalog - Express
+- Cart Service → shopping cart management - Python Flask
+- Order Service → order lifecycle - Go Gin
+- Payment Service → mock payment simulation - Python FastAPI
+- Notification Service → fake email notifications - Express
 
 ```
 ┌─────────────┐
