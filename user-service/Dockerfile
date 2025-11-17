@@ -8,6 +8,6 @@ RUN npm install
 
 COPY . .
 
-EXPOSE 3000
+EXPOSE 3001
 
-CMD ["npm", "start"]
+CMD ["sh", "-c", "npm run db:push; npm start"]

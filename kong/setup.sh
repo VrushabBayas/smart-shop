@@ -15,9 +15,9 @@ echo "Kong is ready! Configuring services and routes..."
 echo "Creating/Updating User Service..."
 curl -s -X POST ${KONG_ADMIN_URL}/services \
   --data name=user-service \
-  --data url=http://user-service:3000 ||
+  --data url=http://user-service:3001 ||
   curl -s -X PATCH ${KONG_ADMIN_URL}/services/user-service \
-    --data url=http://user-service:3000
+    --data url=http://user-service:3001
 
 # Create or Update route for User Service (matches all /api/user/* paths)
 echo "Creating/Updating route for User Service..."

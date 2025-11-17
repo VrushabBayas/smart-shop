@@ -1,5 +1,3 @@
-// Hook to  call login api
-//
 import axios from 'axios';
 const API_URL = 'http://localhost:8000/api/user';
 export const login = async (username: string, password: string) => {

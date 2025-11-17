@@ -19,7 +19,7 @@ const envSchema = z.object({
   APP_STAGE: z
     .enum(['development', 'production', 'testing'])
     .default('development'),
-  PORT: z.coerce.number().positive().default(3000),
+  PORT: z.coerce.number().positive().default(3001),
   DATABASE_URL: z.string().startsWith('postgresql://'),
   JWT_SECRET: z
     .string()
@@ -43,7 +43,7 @@ try {
   process.exit(1);
 }
 
-export const isProd = isProduction; 
+export const isProd = isProduction;
 export const isDev = isDevelopment;
 export const isTest = isTesting;
 export { env };

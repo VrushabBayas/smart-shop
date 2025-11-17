@@ -5,6 +5,8 @@ export interface JwtPayload {
   username: string;
   iat?: number;
   exp?: number;
+  id: string;
+  email: string;
 }
 
 export const generateToken = async (payload: JwtPayload): Promise<string> => {
