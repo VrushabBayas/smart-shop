@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Kong database (PostgreSQL)
   kong-database:

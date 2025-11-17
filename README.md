@@ -51,12 +51,19 @@ A microservices-based e-commerce application built with React, Node.js, Express,
 
 ### User Service
 
-- **Technology**: Node.js + Express + TypeScript
-- **Port**: 3000
+- **Technology**: Node.js + Express + TypeScript + Drizzle ORM
+- **Port**: 3000 (exposed from container port 3001)
+- **Database**: PostgreSQL 15 (dedicated instance on port 5433)
 - **Description**: Handles user authentication and management
+- **Features**:
+  - User registration with email/username uniqueness validation
+  - Secure password hashing with bcrypt
+  - JWT token-based authentication
+  - PostgreSQL database with Drizzle ORM
+  - Automatic database migrations on startup
 - **Endpoints**:
-  - `POST /api/user/login` - User login (username: `user`, password: `pass`)
-  - `GET /api/user/check` - Check user authentication status
+  - `POST /api/user/signup` - User registration
+  - `POST /api/user/login` - User login (email/password)
   - `GET /health` - Health check endpoint
 
 ### Kong API Gateway
@@ -79,6 +86,19 @@ A microservices-based e-commerce application built with React, Node.js, Express,
 - **Technology**: PostgreSQL 15
 - **Port**: 5432
 - **Description**: Stores Kong's configuration and routes
+
+### User Service Database
+
+- **Technology**: PostgreSQL 15
+- **Port**: 5433
+- **Database**: smart_shop_userdb
+- **User**: userservice
+- **Description**: Dedicated PostgreSQL database for user service data
+- **Schema**:
+  - `users` table with UUID primary key
+  - Email and username unique constraints
+  - Password hashing with bcrypt
+  - Timestamps for created_at and updated_at
 
 ## 🚀 Getting Started
 
@@ -135,25 +155,49 @@ docker-compose down -v
 
 ### Through Kong Gateway (Recommended)
 
-| Method | Endpoint                             | Description          |
-| ------ | ------------------------------------ | -------------------- |
-| POST   | http://localhost:8000/api/user/login | User login           |
-| GET    | http://localhost:8000/api/user/check | Check authentication |
+| Method | Endpoint                              | Description       |
+| ------ | ------------------------------------- | ----------------- |
+| POST   | http://localhost:8000/api/user/signup | User registration |
+| POST   | http://localhost:8000/api/user/login  | User login        |
 
-### Example Request
+### Example Requests
+
+**Sign Up:**
+
+```bash
+curl -X POST http://localhost:8000/api/user/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "username": "testuser",
+    "password": "SecurePass123",
+    "first_name": "John",
+    "last_name": "Doe"
+  }'
+```
 
 **Login:**
 
 ```bash
 curl -X POST http://localhost:8000/api/user/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "user", "password": "pass"}'
+  -d '{
+    "email": "user@example.com",
+    "password": "SecurePass123"
+  }'
 ```
 
-**Check Authentication:**
+**Response Format:**
 
-```bash
-curl http://localhost:8000/api/user/check
+```json
+{
+  "data": {
+    "message": "Login Successful",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "error": null,
+    "username": "testuser"
+  }
+}
 ```
 
 ## 🛠️ Development
@@ -176,11 +220,21 @@ shop-smart/
 │   ├── Dockerfile
 │   ├── package.json
 │   ├── tsconfig.json
+│   ├── drizzle.config.ts      # Drizzle ORM configuration
+│   ├── env.ts                 # Environment validation with Zod
 │   └── src/
 │       ├── app.ts             # Server entry point
 │       ├── server.ts          # Express app configuration
-│       └── routes/
-│           └── authRoute.ts   # Authentication routes
+│       ├── controller/
+│       │   └── authController.ts   # Authentication logic
+│       ├── db/
+│       │   ├── connection.ts  # Database connection
+│       │   └── schema.ts      # User table schema
+│       ├── routes/
+│       │   └── authRoute.ts   # Authentication routes
+│       └── utils/
+│           ├── jwt.ts         # JWT token generation
+│           └── password.ts    # Password hashing & comparison
 └── kong/                      # Kong API Gateway setup
     ├── Dockerfile
     └── setup.sh               # Kong route configuration
@@ -241,6 +295,22 @@ docker-compose restart kong-setup
 
 - `KONG_ADMIN_URL`: http://kong-gateway:8001
 
+**User Service:**
+
+- `DATABASE_URL`: postgresql://userservice:userservice123@user-database:5432/smart_shop_userdb
+- `PORT`: 3001
+- `NODE_ENV`: development
+- `APP_STAGE`: development
+- `JWT_SECRET`: JWT signing secret key
+- `JWT_EXPIRES_IN`: 7d
+- `BCRYPT_SALT_ROUNDS`: 10
+
+**User Database:**
+
+- `POSTGRES_USER`: userservice
+- `POSTGRES_DB`: smart_shop_userdb
+- `POSTGRES_PASSWORD`: userservice123
+
 ### Docker Compose Services
 
 All services are connected via the `microservices-networks` bridge network, allowing inter-service communication using service names as hostnames.
@@ -252,7 +322,60 @@ All services include health checks:
 - **User Service**: `curl http://localhost:3000/health`
 - **Kong Gateway**: `kong health`
 - **Frontend**: `curl http://localhost:80`
-- **PostgreSQL**: `pg_isready -U kong`
+- **Kong PostgreSQL**: `pg_isready -U kong`
+- **User Service PostgreSQL**: `pg_isready -U userservice`
+
+## 🗄️ Database Management
+
+### Access User Service Database
+
+```bash
+# Using docker-compose
+docker-compose exec user-database psql -U userservice -d smart_shop_userdb
+
+# From local machine (if psql is installed)
+psql -h localhost -p 5433 -U userservice -d smart_shop_userdb
+```
+
+Password: `userservice123`
+
+### Useful psql Commands
+
+```sql
+\dt              -- List all tables
+\d users         -- Describe users table
+SELECT * FROM users;  -- View all users
+\q               -- Quit psql
+```
+
+### Drizzle Studio
+
+Run Drizzle Studio to visualize and manage your database:
+
+```bash
+cd user-service
+npm run db:studio
+```
+
+Make sure your local `.env` file points to `localhost:5433` for local access:
+
+```env
+DATABASE_URL=postgresql://userservice:userservice123@localhost:5433/smart_shop_userdb
+```
+
+### Database Migrations
+
+Migrations run automatically on container startup via:
+
+```bash
+npm run db:push
+```
+
+To run migrations manually:
+
+```bash
+docker-compose exec user-service npm run db:push
+```
 
 ## 📝 Notes
 
@@ -274,10 +397,15 @@ CORS is enabled globally on Kong with:
 
 ## 🚧 Future Enhancements
 
+- [x] User authentication with JWT
+- [x] PostgreSQL database with Drizzle ORM
+- [x] Password hashing with bcrypt
+- [ ] Add email verification
+- [ ] Add password reset functionality
+- [ ] Add refresh token mechanism
 - [ ] Add product service
 - [ ] Add order service
 - [ ] Add payment service
-- [ ] Implement JWT authentication
 - [ ] Add rate limiting via Kong
 - [ ] Add monitoring and logging (ELK stack)
 - [ ] Add CI/CD pipeline
