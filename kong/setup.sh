@@ -23,13 +23,12 @@ curl -s -X POST ${KONG_ADMIN_URL}/services \
 echo "Creating/Updating route for User Service..."
 curl -s -X POST ${KONG_ADMIN_URL}/services/user-service/routes \
   --data "paths[]=/api/user" \
-  --data "paths[]=~/api/user/.*" \
-  --data "strip_path=false" \
+  --data "paths[]=/api/user/~" \
+  --data "strip_path=true" \
   --data "name=user-route" ||
   curl -s -X PATCH ${KONG_ADMIN_URL}/routes/user-route \
     --data "paths[]=/api/user" \
-    --data "paths[]=~/api/user/.*" \
-    --data "strip_path=false"
+    --data "strip_path=true"
 
 # Enable CORS plugin globally
 echo "Enabling CORS plugin..."
@@ -57,4 +56,7 @@ echo "  - Kong Admin API: http://localhost:8001"
 echo "  - Kong Admin GUI: http://localhost:8002"
 echo ""
 echo "API Endpoints (through Kong):"
+echo "  - POST http://localhost:8000/api/user/signup"
 echo "  - POST http://localhost:8000/api/user/login"
+echo "  - GET http://localhost:8000/api/user/profile/:id"
+

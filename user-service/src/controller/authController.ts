@@ -76,10 +76,37 @@ export const loginUser = async (req: Request, res: Response) => {
         token,
         error: null,
         username: user.username,
+        id: user.id,
       },
     });
   } catch (error) {
     console.error('Error during login:', error);
+    res.status(500).json({ data: null, message: 'Internal Server Error' });
+  }
+};
+
+export const getUserProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.id;
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ data: null, message: 'User ID is required' });
+    }
+
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+      .then((rows) => rows[0]);
+
+    if (!user) {
+      return res.status(404).json({ data: null, message: 'User not found' });
+    }
+    res.status(200).json({ data: user, message: 'User profile fetched' });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
     res.status(500).json({ data: null, message: 'Internal Server Error' });
   }
 };

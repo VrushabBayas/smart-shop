@@ -41,13 +41,18 @@ A microservices-based e-commerce application built with React, Node.js, Express,
 
 ### Frontend
 
-- **Technology**: React 19 + TypeScript + Vite
+- **Technology**: React 19 + TypeScript + Vite + Axios
 - **Port**: 8080
 - **Description**: Single Page Application (SPA) served via Nginx
 - **Features**:
   - Modern React with TypeScript
   - Vite for fast development and optimized builds
   - Nginx reverse proxy for API calls to Kong Gateway
+  - Axios HTTP client with interceptors
+  - Centralized API service layer
+  - JWT token management with localStorage
+  - Global error handling
+  - Type-safe API calls with TypeScript interfaces
 
 ### User Service
 
@@ -212,10 +217,17 @@ shop-smart/
 │   ├── nginx.conf             # Nginx configuration
 │   ├── package.json
 │   ├── vite.config.ts
+│   ├── .env                   # Environment variables
 │   └── src/
 │       ├── App.tsx
 │       ├── main.tsx
-│       └── ...
+│       └── Api/
+│           ├── index.ts       # Main API exports
+│           ├── apiClient.ts   # Axios instance with interceptors
+│           └── services/
+│               ├── authService.ts    # Authentication endpoints
+│               ├── userService.ts    # User-related endpoints
+│               └── index.ts          # Service exports
 ├── user-service/              # User microservice
 │   ├── Dockerfile
 │   ├── package.json
@@ -248,6 +260,37 @@ shop-smart/
 cd frontend
 npm install
 npm run dev
+```
+
+**Frontend Environment Setup:**
+
+Create a `.env` file in the frontend directory:
+
+```env
+VITE_API_URL=http://localhost:8000
+```
+
+**Frontend API Architecture:**
+
+The frontend uses a centralized API service layer:
+
+- **apiClient.ts**: Axios instance with request/response interceptors
+- **authService.ts**: Login, signup, logout, token management
+- **userService.ts**: User profile and user-related operations
+
+Example usage:
+
+```typescript
+import { authService, userService } from './Api';
+
+// Login
+const response = await authService.login({ email, password });
+
+// Get user profile
+const profile = await userService.getCurrentUserProfile();
+
+// Logout
+authService.logout();
 ```
 
 **User Service:**
@@ -400,9 +443,15 @@ CORS is enabled globally on Kong with:
 - [x] User authentication with JWT
 - [x] PostgreSQL database with Drizzle ORM
 - [x] Password hashing with bcrypt
+- [x] Centralized API service layer in frontend
+- [x] Axios interceptors for authentication
+- [x] Token management with localStorage
 - [ ] Add email verification
 - [ ] Add password reset functionality
 - [ ] Add refresh token mechanism
+- [ ] Implement protected routes in frontend
+- [ ] Add React Context for global auth state
+- [ ] Add loading states and error boundaries
 - [ ] Add product service
 - [ ] Add order service
 - [ ] Add payment service
