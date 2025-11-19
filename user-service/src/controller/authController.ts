@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import db from '../db/connection';
 import { users } from '../db/schema';
-import { generateToken } from '../utils/jwt';
+import { generateRefreshToken, generateToken } from '../utils/jwt';
 import { comparePassword, hashPassword } from '../utils/password';
 import { Request, Response } from 'express';
 
@@ -69,6 +69,10 @@ export const loginUser = async (req: Request, res: Response) => {
       id: user.id,
       email: user.email,
     });
+    // generate refresh token and save it to db
+    const refreshToken = await generateRefreshToken(user.id);
+    await db.update(users).set({ refreshToken }).where(eq(users.id, user.id));
+
     res.status(200).json({
       data: {
         message: 'Login Successful',
@@ -76,6 +80,7 @@ export const loginUser = async (req: Request, res: Response) => {
         error: null,
         username: user.username,
         id: user.id,
+        refreshToken,
       },
     });
   } catch (error) {
@@ -111,6 +116,41 @@ export const getUserProfile = async (req: Request, res: Response) => {
       .json({ data: userWithoutPassword, message: 'User profile fetched' });
   } catch (error) {
     console.error('Error fetching user profile:', error);
+    res.status(500).json({ data: null, message: 'Internal Server Error' });
+  }
+};
+
+export const refreshAccessToken = async (req: Request, res: Response) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res
+        .status(400)
+        .json({ data: null, message: 'Refresh token is required' });
+    }
+
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.refreshToken, refreshToken))
+      .limit(1)
+      .then((rows) => rows[0]);
+
+    if (!user) {
+      return res.status(401).json({ data: null, message: 'Invalid token' });
+    }
+
+    const newAccessToken = await generateToken({
+      username: user.username,
+      id: user.id,
+      email: user.email,
+    });
+
+    res.status(200).json({
+      data: { accessToken: newAccessToken, message: 'Token refreshed' },
+    });
+  } catch (error) {
+    console.error('Error refreshing access token:', error);
     res.status(500).json({ data: null, message: 'Internal Server Error' });
   }
 };
