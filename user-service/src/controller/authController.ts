@@ -100,10 +100,15 @@ export const getUserProfile = async (req: Request, res: Response) => {
       .limit(1)
       .then((rows) => rows[0]);
 
+    //update user to remove password field
+    const { password, ...userWithoutPassword } = user || {};
+
     if (!user) {
       return res.status(404).json({ data: null, message: 'User not found' });
     }
-    res.status(200).json({ data: user, message: 'User profile fetched' });
+    res
+      .status(200)
+      .json({ data: userWithoutPassword, message: 'User profile fetched' });
   } catch (error) {
     console.error('Error fetching user profile:', error);
     res.status(500).json({ data: null, message: 'Internal Server Error' });
