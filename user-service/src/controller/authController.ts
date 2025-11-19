@@ -154,3 +154,27 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     res.status(500).json({ data: null, message: 'Internal Server Error' });
   }
 };
+
+export const passwordReset = async (req: Request, res: Response) => {
+  try {
+    const { email, newPassword } = req.body;
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1)
+      .then((rows) => rows[0]);
+    if (!user) {
+      return res.status(404).json({ data: null, message: 'User not found' });
+    }
+    const hashedPassword = await hashPassword(newPassword);
+    await db
+      .update(users)
+      .set({ password: hashedPassword })
+      .where(eq(users.id, user.id));
+    res.status(200).json({ data: null, message: 'Password reset successful' });
+  } catch (error) {
+    console.error('Error during password reset:', error);
+    res.status(500).json({ data: null, message: 'Internal Server Error' });
+  }
+};

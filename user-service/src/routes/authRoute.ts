@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getUserProfile,
   loginUser,
+  passwordReset,
   refreshAccessToken,
   signUpUser,
 } from '../controller/authController';
@@ -17,5 +18,6 @@ router.post('/refresh', refreshAccessToken);
 router.post('/login', loginUser);
 router.use(authenticateToken);
 router.get('/profile', getUserProfile);
+router.post('/reset-password', passwordReset);
 
 export default router;
