@@ -16,7 +16,7 @@ export const generateToken = async (payload: JwtPayload): Promise<string> => {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
     .setIssuedAt()
-    .setExpirationTime('2h')
+    .setExpirationTime(env.JWT_EXPIRES_IN)
     .sign(secretKey);
 };
 
@@ -31,6 +31,6 @@ export const generateRefreshToken = async (UserId: string): Promise<string> => {
   return new SignJWT({ id: UserId })
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
     .setIssuedAt()
-    .setExpirationTime('7d')
+    .setExpirationTime(env.REFRESH_JWT_EXPIRES_IN)
     .sign(secretKey);
 };
