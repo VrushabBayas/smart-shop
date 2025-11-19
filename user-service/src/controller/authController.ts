@@ -12,7 +12,6 @@ export const signUpUser = async (req: Request, res: Response) => {
     const hashedPassword = await hashPassword(password);
 
     if (username && hashedPassword) {
-      const hashedPassword = await hashPassword(password);
       const [user] = await db
         .insert(users)
         .values({
@@ -87,8 +86,8 @@ export const loginUser = async (req: Request, res: Response) => {
 
 export const getUserProfile = async (req: Request, res: Response) => {
   try {
-    const userId = req.params.id;
-    if (!userId) {
+    const userId = req.query.id;
+    if (!userId || typeof userId !== 'string') {
       return res
         .status(400)
         .json({ data: null, message: 'User ID is required' });
