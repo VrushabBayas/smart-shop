@@ -30,6 +30,9 @@ const envSchema = z.object({
   BCRYPT_SALT_ROUNDS: z.coerce.number().min(10).max(20).default(12),
   JWT_EXPIRES_IN: z.string().default('15m'),
   REFRESH_JWT_EXPIRES_IN: z.string().default('7d'),
+  SERVICE_NAME: z.string().default('user-service'),
+  CONSUL_HOST: z.string().optional(),
+  CONSUL_PORT: z.coerce.number().positive().default(8500),
 });
 
 export type Env = z.infer<typeof envSchema>;
