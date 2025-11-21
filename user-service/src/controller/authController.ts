@@ -6,7 +6,6 @@ import { comparePassword, hashPassword } from '../utils/password';
 import { Request, Response } from 'express';
 
 export const signUpUser = async (req: Request, res: Response) => {
-  console.log('[log]req:', req.body);
   try {
     const { username, password } = req.body || {};
     const hashedPassword = await hashPassword(password);
@@ -105,8 +104,13 @@ export const getUserProfile = async (req: Request, res: Response) => {
       .limit(1)
       .then((rows) => rows[0]);
 
-    //update user to remove password field
-    const { password, ...userWithoutPassword } = user || {};
+    const {
+      password,
+      createdAt,
+      updatedAt,
+      refreshToken,
+      ...userWithoutPassword
+    } = user || {};
 
     if (!user) {
       return res.status(404).json({ data: null, message: 'User not found' });
