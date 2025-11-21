@@ -18,7 +18,27 @@ services:
     networks:
       - microservices-networks
 
+  # Test Database - User Service
+  user-database-test:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_DB: ss_user_testdb
+      POSTGRES_PASSWORD: testpassword
+    ports:
+      - '5434:5432' # FIXED: postgres internal port is always 5432
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U testuser -d ss_user_testdb']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - user-database-test-data:/var/lib/postgresql/data # FIXED: correct PG data directory
+    networks:
+      - microservices-networks # FIXED: removed colon
+
   # Kong Database Migration
+
   kong-migration:
     image: kong/kong-gateway:3.4
     depends_on:
@@ -35,6 +55,7 @@ services:
     restart: on-failure
 
   # Kong API Gateway
+
   kong-gateway:
     image: kong/kong-gateway:3.4
     depends_on:
@@ -53,10 +74,10 @@ services:
       KONG_ADMIN_ERROR_LOG: /dev/stderr
       KONG_ADMIN_LISTEN: 0.0.0.0:8001
     ports:
-      - '8000:8000' # Proxy Port
-      - '8443:8443' # Proxy SSL Port
-      - '8001:8001' # Admin API Port
-      - '8444:8444' # Admin API SSL Port
+      - '8000:8000'
+      - '8443:8443'
+      - '8001:8001'
+      - '8444:8444'
     healthcheck:
       test: ['CMD', 'kong', 'health']
       interval: 10s
@@ -66,6 +87,7 @@ services:
       - microservices-networks
 
   # Kong Configuration Setup
+
   kong-setup:
     build: ./kong
     depends_on:
@@ -79,6 +101,7 @@ services:
     restart: on-failure
 
   # Consule service discovery
+
   consul:
     image: consul:1.15
     ports:
@@ -97,6 +120,7 @@ services:
       timeout: 5s
       retries: 5
 
+  # User Database (Main)
   user-database:
     image: postgres:15-alpine
     environment:
@@ -111,15 +135,21 @@ services:
       timeout: 5s
       retries: 5
     volumes:
-      - user-database-data:/var/lib/postgresql/database
+      - user-database-data:/var/lib/postgresql/data # FIXED
     networks:
       - microservices-networks
 
   # User Service
+
   user-service:
     build: ./user-service
+    container_name: user-service
     depends_on:
       user-database:
+        condition: service_healthy
+      user-database-test:
+        condition: service_healthy
+      consul:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://userservice:userservice123@user-database:5432/smart_shop_userdb
@@ -127,7 +157,8 @@ services:
       NODE_ENV: development
       APP_STAGE: development
       JWT_SECRET: 'This is my super secret jwt key which is really long but easy to guess'
-      JWT_EXPIRES_IN: 7d
+      JWT_EXPIRES_IN: 2h
+      REFRESH_JWT_EXPIRES_IN: 7d
       BCRYPT_SALT_ROUNDS: 10
       LOG_LEVEL: info
       RATE_LIMIT_WINDOW_MS: 900000
@@ -136,7 +167,6 @@ services:
       CONSUL_PORT: 8500
       SERVICE_NAME: user-service
       SERVICE_PORT: 3001
-
     ports:
       - '3000:3001'
     networks:
@@ -146,8 +176,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    volumes:
+      - ./user-service:/usr/src/app
+      - /app/node_modules
+    command: 'npm run start'
 
   # Frontend Service
+
   frontend:
     build: ./frontend
     ports:
@@ -158,7 +193,7 @@ services:
     networks:
       - microservices-networks
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:80']
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -171,3 +206,4 @@ volumes:
   kong-database-data:
   user-database-data:
   consul-data:
+  user-database-test-data:

@@ -4,7 +4,8 @@ process.env.APP_STAGE = process.env.APP_STAGE || 'development';
 
 const isProduction = process.env.APP_STAGE === 'production';
 const isDevelopment = process.env.APP_STAGE === 'development';
-const isTesting = process.env.APP_STAGE === 'testing';
+const isTesting =
+  process.env.APP_STAGE === 'testing' || process.env.NODE_ENV === 'test';
 
 if (isDevelopment) {
   loadEnv();
@@ -14,13 +15,14 @@ if (isDevelopment) {
 
 const envSchema = z.object({
   NODE_ENV: z
-    .enum(['development', 'production', 'testing'])
+    .enum(['development', 'production', 'test'])
     .default('development'),
   APP_STAGE: z
-    .enum(['development', 'production', 'testing'])
+    .enum(['development', 'production', 'testing', 'test'])
     .default('development'),
   PORT: z.coerce.number().positive().default(3001),
   DATABASE_URL: z.string().startsWith('postgresql://'),
+  TEST_DATABASE_URL: z.string().startsWith('postgresql://'),
   JWT_SECRET: z
     .string()
     .min(10, 'JWT secret must be at least 32 characters long'),
