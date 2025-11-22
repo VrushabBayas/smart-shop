@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import express from 'express';
 import authRouter from '../routes/authRoute.ts';
 import { users } from '../db/schema';
 import { testDb } from '../tests/setup.ts';
 import { generateTestUser, getUserByEmail } from '../tests/helper';
 import request from 'supertest';
+import { eq } from 'drizzle-orm';
 
 const app = express();
 app.use(express.json());
@@ -158,6 +159,129 @@ describe('Auth Controller', () => {
       const response = await request(app).get('/api/user/profile').expect(401);
       expect(response.body.data).toBeNull();
       expect(response.body.message).toBe('Unauthorized');
+    });
+
+    it('should return 404 Not Found for non-existing user', async () => {
+      const testUser = generateTestUser();
+      await request(app).post('/api/user/signup').send(testUser).expect(201);
+      const loginResponse = await request(app)
+        .post('/api/user/login')
+        .send({
+          email: testUser.email,
+          password: testUser.password,
+        })
+        .expect(200);
+      const token = loginResponse.body.data.token;
+      const userId = loginResponse.body.data.id;
+      // Delete the user directly from the database to simulate non-existence
+      await testDb.delete(users).where(eq(users.email, testUser.email));
+      const response = await request(app)
+        .get(`/api/user/profile?id=${userId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(404);
+      expect(response.body.data).toBeNull();
+      expect(response.body.message).toBe('User not found');
+    });
+    it('should fetch user profile successfully', async () => {
+      const testUser = generateTestUser();
+      await request(app).post('/api/user/signup').send(testUser).expect(201);
+      const loginResponse = await request(app)
+        .post('/api/user/login')
+        .send({
+          email: testUser.email,
+          password: testUser.password,
+        })
+        .expect(200);
+      const token = loginResponse.body.data.token;
+      const userId = loginResponse.body.data.id;
+
+      const response = await request(app)
+        .get(`/api/user/profile?id=${userId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(response.body.message).toBe('User profile fetched');
+      expect(response.body.data.email).toBe(testUser.email);
+      expect(response.body.data.username).toBe(testUser.username);
+      expect(response.body.data.password).toBeUndefined();
+    });
+    it('should return 500 when something went wrong during fetching profile', async () => {
+      const testUser = generateTestUser();
+      await request(app).post('/api/user/signup').send(testUser).expect(201);
+      const loginResponse = await request(app)
+        .post('/api/user/login')
+        .send({
+          email: testUser.email,
+          password: testUser.password,
+        })
+        .expect(200);
+      const token = loginResponse.body.data.token;
+      const userId = loginResponse.body.data.id;
+
+      const dbSelectSpy = vi.spyOn(testDb, 'select').mockImplementation(() => {
+        throw new Error('Database connection failed');
+      });
+
+      const response = await request(app)
+        .get(`/api/user/profile?id=${userId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(500);
+
+      expect(response.body.data).toBeNull();
+      expect(response.body.message).toBe('Internal Server Error');
+      expect(dbSelectSpy).toHaveBeenCalled();
+      dbSelectSpy.mockRestore();
+    });
+  });
+
+  describe('POST /api/user/refresh', () => {
+    it('should return 400 Bad Request when no refresh token is provided', async () => {
+      const response = await request(app)
+        .post('/api/user/refresh')
+        .send({})
+        .expect(400);
+      expect(response.body.data).toBeNull();
+      expect(response.body.message).toBe('Refresh token is required');
+    });
+    it('should return 401 Invalid refresh token for invalid token', async () => {
+      const response = await request(app)
+        .post('/api/user/refresh')
+        .send({ refreshToken: 'someInvalidToken' })
+        .expect(401);
+      expect(response.body.data).toBeNull();
+      expect(response.body.message).toBe('Invalid token');
+    });
+    it('should refresh access token successfully with valid refresh token', async () => {
+      const testUser = generateTestUser();
+      await request(app).post('/api/user/signup').send(testUser).expect(201);
+      const loginResponse = await request(app)
+        .post('/api/user/login')
+        .send({
+          email: testUser.email,
+          password: testUser.password,
+        })
+        .expect(200);
+      const refreshToken = loginResponse.body.data.refreshToken;
+      const response = await request(app)
+        .post('/api/user/refresh')
+        .send({ refreshToken })
+        .expect(200);
+      console.log('[log]response:', response);
+      expect(response.body.message).toBe('Access token refreshed');
+      expect(response.body.data.accessToken).toBeDefined();
+    });
+    it('should return 500 when something went wrong during token refresh', async () => {
+      const dbSelectSpy = vi.spyOn(testDb, 'select').mockImplementation(() => {
+        throw new Error('Database connection failed');
+      });
+      const response = await request(app)
+        .post('/api/user/refresh')
+        .send({ refreshToken: 'someInvalidToken' })
+        .expect(500);
+      expect(response.body.data).toBeNull();
+      expect(response.body.message).toBe('Internal Server Error');
+      expect(dbSelectSpy).toHaveBeenCalled();
+      dbSelectSpy.mockRestore();
     });
   });
 });

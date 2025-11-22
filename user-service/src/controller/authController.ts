@@ -80,12 +80,7 @@ export const loginUser = async (req: Request, res: Response) => {
 
 export const getUserProfile = async (req: Request, res: Response) => {
   try {
-    const userId = req.query.id;
-    if (!userId || typeof userId !== 'string') {
-      return res
-        .status(400)
-        .json({ data: null, message: 'User ID is required' });
-    }
+    const userId = req.query.id as string;
 
     const user = await db
       .select()
@@ -141,7 +136,9 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({
-      data: { accessToken: newAccessToken, message: 'Token refreshed' },
+      data: { accessToken: newAccessToken },
+      message: 'Access token refreshed',
+      error: null,
     });
   } catch (error) {
     console.error('Error refreshing access token:', error);

@@ -40,6 +40,9 @@ export const insertUserSchema = createInsertSchema(users, {
 
 export const selectUserSchema = createSelectSchema(users);
 
+export const querySchema = z.object({
+  id: z.string().uuid('Invalid user ID format'),
+});
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;

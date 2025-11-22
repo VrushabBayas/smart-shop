@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError, ZodSchema } from 'zod';
+import { querySchema } from '../db/schema';
 
 export const validateBody = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
       const validData = schema.parse(req.body);
-      console.log('[log]validData:', validData);
       req.body = validData;
       next();
     } catch (error) {
@@ -24,10 +24,10 @@ export const validateBody = (schema: ZodSchema) => {
   };
 };
 
-export const validateQueryParameters = (schema: ZodSchema) => {
+export const validateQueryParameters = (querySchema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      schema.parse(req.query);
+      querySchema.parse(req.query);
       next();
     } catch (error) {
       if (error instanceof ZodError) {

@@ -10,7 +10,7 @@ import {
   validateBody,
   validateQueryParameters,
 } from '../middleware/validation';
-import { insertUserSchema, selectUserSchema } from '../db/schema';
+import { insertUserSchema, querySchema } from '../db/schema';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
@@ -20,11 +20,7 @@ router.post('/refresh', refreshAccessToken);
 
 router.post('/login', loginUser);
 router.use(authenticateToken);
-router.get(
-  '/profile',
-  validateQueryParameters(selectUserSchema),
-  getUserProfile,
-);
+router.get('/profile', validateQueryParameters(querySchema), getUserProfile);
 router.post('/reset-password', passwordReset);
 
 export default router;
