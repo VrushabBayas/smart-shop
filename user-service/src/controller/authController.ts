@@ -65,7 +65,7 @@ export const loginUser = async (req: Request, res: Response) => {
       data: {
         token,
         error: null,
-        username: user.username,
+        email: user.email,
         id: user.id,
         refreshToken,
       },

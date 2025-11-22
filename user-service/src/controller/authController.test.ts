@@ -130,7 +130,7 @@ describe('Auth Controller', () => {
         .expect(200);
 
       expect(response.body.message).toBe('Login successful');
-      expect(response.body.data.username).toBe(testUser.username);
+      expect(response.body.data.email).toBe(testUser.email);
       expect(response.body.data.token).toBeDefined();
       expect(response.body.data.refreshToken).toBeDefined();
       expect(response.body.data.id).toBeDefined();
@@ -277,6 +277,92 @@ describe('Auth Controller', () => {
       const response = await request(app)
         .post('/api/user/refresh')
         .send({ refreshToken: 'someInvalidToken' })
+        .expect(500);
+      expect(response.body.data).toBeNull();
+      expect(response.body.message).toBe('Internal Server Error');
+      expect(dbSelectSpy).toHaveBeenCalled();
+      dbSelectSpy.mockRestore();
+    });
+  });
+
+  describe('POST /api/user/password-reset', () => {
+    it('should return 404 User not found for non-existing email', async () => {
+      const testUser = generateTestUser();
+      await request(app).post('/api/user/signup').send(testUser).expect(201);
+      const loginResponse = await request(app)
+        .post('/api/user/login')
+        .send({
+          email: testUser.email,
+          password: testUser.password,
+        })
+        .expect(200);
+      const token = loginResponse.body.data.token;
+      await testDb.delete(users).where(eq(users.email, testUser.email));
+      const response = await request(app)
+        .post('/api/user/reset-password')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          email: testUser.email,
+          newPassword: 'NewPass@1234',
+        })
+        .expect(404);
+      expect(response.body.data).toBeNull();
+      expect(response.body.message).toBe('User not found');
+    });
+    it('should reset password successfully for existing user', async () => {
+      const testUser = generateTestUser();
+      await request(app).post('/api/user/signup').send(testUser).expect(201);
+      const loginResponse = await request(app)
+        .post('/api/user/login')
+        .send({
+          email: testUser.email,
+          password: testUser.password,
+        })
+        .expect(200);
+      const token = loginResponse.body.data.token;
+      const response = await request(app)
+        .post('/api/user/reset-password')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          email: testUser.email,
+          newPassword: 'NewPass@1234',
+        })
+        .expect(200);
+      expect(response.body.message).toBe('Password reset successful');
+      const loginWithNewPasswordResponse = await request(app)
+        .post('/api/user/login')
+        .send({
+          email: testUser.email,
+          password: 'NewPass@1234',
+        })
+        .expect(200);
+      expect(loginWithNewPasswordResponse.body.message).toBe(
+        'Login successful',
+      );
+    });
+    it('should return 500 when something went wrong during password reset', async () => {
+      const testUser = generateTestUser();
+      await request(app).post('/api/user/signup').send(testUser).expect(201);
+
+      const loginResponse = await request(app)
+        .post('/api/user/login')
+        .send({
+          email: testUser.email,
+          password: testUser.password,
+        })
+        .expect(200);
+      const token = loginResponse.body.data.token;
+      const dbSelectSpy = vi.spyOn(testDb, 'select').mockImplementation(() => {
+        throw new Error('Database connection failed');
+      });
+
+      const response = await request(app)
+        .post('/api/user/reset-password')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          email: 'test@gmail.com',
+          newPassword: 'NewPass@1234',
+        })
         .expect(500);
       expect(response.body.data).toBeNull();
       expect(response.body.message).toBe('Internal Server Error');
