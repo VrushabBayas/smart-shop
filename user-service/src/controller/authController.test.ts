@@ -152,4 +152,12 @@ describe('Auth Controller', () => {
       dbSelectSpy.mockRestore();
     });
   });
+
+  describe('GET /api/user/profile', () => {
+    it('should return 401 Unauthorized when no token is provided', async () => {
+      const response = await request(app).get('/api/user/profile').expect(401);
+      expect(response.body.data).toBeNull();
+      expect(response.body.message).toBe('Unauthorized');
+    });
+  });
 });

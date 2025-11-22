@@ -6,8 +6,11 @@ import {
   refreshAccessToken,
   signUpUser,
 } from '../controller/authController';
-import { validateBody } from '../middleware/validation';
-import { insertUserSchema } from '../db/schema';
+import {
+  validateBody,
+  validateQueryParameters,
+} from '../middleware/validation';
+import { insertUserSchema, selectUserSchema } from '../db/schema';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
@@ -17,7 +20,11 @@ router.post('/refresh', refreshAccessToken);
 
 router.post('/login', loginUser);
 router.use(authenticateToken);
-router.get('/profile', getUserProfile);
+router.get(
+  '/profile',
+  validateQueryParameters(selectUserSchema),
+  getUserProfile,
+);
 router.post('/reset-password', passwordReset);
 
 export default router;

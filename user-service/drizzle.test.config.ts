@@ -4,10 +4,10 @@ import env from './env.ts';
 
 export default defineConfig({
   schema: './src/db/schema.ts',
-  out: './migrations',
+  out: './test_ migrationsa',
   dialect: 'postgresql',
   dbCredentials: {
-    url: env.DATABASE_URL,
+    url: env.TEST_DATABASE_URL,
   },
   verbose: true,
   strict: true,

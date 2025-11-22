@@ -8,7 +8,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push --force",
-    "db:push:test": "NODE_ENV=test drizzle-kit push --force",
+    "db:push:test": "drizzle-kit push --force --config ./drizzle.test.config.ts",
     "db:studio:docker": "docker-compose exec user-service npm run db:studio",
     "build": "tsc",
     "test:setup": "npm run db:push:test",

@@ -16,7 +16,7 @@ export const authenticateToken = async (
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
-      return res.status(401).json({ data: null, message: 'Bad Reqyest' });
+      return res.status(401).json({ data: null, message: 'Unauthorized' });
     }
     const payload = await verifyToken(token);
     req.user = payload;

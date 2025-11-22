@@ -179,7 +179,7 @@ services:
     volumes:
       - ./user-service:/usr/src/app
       - /app/node_modules
-    command: 'npm run start'
+    command: sh -c "npm run db:push && npm start"
 
   # Frontend Service
 
