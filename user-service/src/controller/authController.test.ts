@@ -3,7 +3,11 @@ import express from 'express';
 import authRouter from '../routes/authRoute.ts';
 import { users } from '../db/schema';
 import { testDb } from '../tests/setup.ts';
-import { generateTestUser, getUserByEmail } from '../tests/helper';
+import {
+  generateTestUser,
+  getUserByEmail,
+  createUserAndLogin,
+} from '../tests/helper';
 import request from 'supertest';
 import { eq } from 'drizzle-orm';
 
@@ -162,19 +166,9 @@ describe('Auth Controller', () => {
     });
 
     it('should return 404 Not Found for non-existing user', async () => {
-      const testUser = generateTestUser();
-      await request(app).post('/api/user/signup').send(testUser).expect(201);
-      const loginResponse = await request(app)
-        .post('/api/user/login')
-        .send({
-          email: testUser.email,
-          password: testUser.password,
-        })
-        .expect(200);
-      const token = loginResponse.body.data.token;
-      const userId = loginResponse.body.data.id;
+      const { token, userId, user } = await createUserAndLogin(app);
       // Delete the user directly from the database to simulate non-existence
-      await testDb.delete(users).where(eq(users.email, testUser.email));
+      await testDb.delete(users).where(eq(users.email, user.email));
       const response = await request(app)
         .get(`/api/user/profile?id=${userId}`)
         .set('Authorization', `Bearer ${token}`)
@@ -183,17 +177,7 @@ describe('Auth Controller', () => {
       expect(response.body.message).toBe('User not found');
     });
     it('should fetch user profile successfully', async () => {
-      const testUser = generateTestUser();
-      await request(app).post('/api/user/signup').send(testUser).expect(201);
-      const loginResponse = await request(app)
-        .post('/api/user/login')
-        .send({
-          email: testUser.email,
-          password: testUser.password,
-        })
-        .expect(200);
-      const token = loginResponse.body.data.token;
-      const userId = loginResponse.body.data.id;
+      const { token, userId, user } = await createUserAndLogin(app);
 
       const response = await request(app)
         .get(`/api/user/profile?id=${userId}`)
@@ -201,22 +185,12 @@ describe('Auth Controller', () => {
         .expect(200);
 
       expect(response.body.message).toBe('User profile fetched');
-      expect(response.body.data.email).toBe(testUser.email);
-      expect(response.body.data.username).toBe(testUser.username);
+      expect(response.body.data.email).toBe(user.email);
+      expect(response.body.data.username).toBe(user.username);
       expect(response.body.data.password).toBeUndefined();
     });
     it('should return 500 when something went wrong during fetching profile', async () => {
-      const testUser = generateTestUser();
-      await request(app).post('/api/user/signup').send(testUser).expect(201);
-      const loginResponse = await request(app)
-        .post('/api/user/login')
-        .send({
-          email: testUser.email,
-          password: testUser.password,
-        })
-        .expect(200);
-      const token = loginResponse.body.data.token;
-      const userId = loginResponse.body.data.id;
+      const { token, userId } = await createUserAndLogin(app);
 
       const dbSelectSpy = vi.spyOn(testDb, 'select').mockImplementation(() => {
         throw new Error('Database connection failed');
@@ -252,21 +226,11 @@ describe('Auth Controller', () => {
       expect(response.body.message).toBe('Invalid token');
     });
     it('should refresh access token successfully with valid refresh token', async () => {
-      const testUser = generateTestUser();
-      await request(app).post('/api/user/signup').send(testUser).expect(201);
-      const loginResponse = await request(app)
-        .post('/api/user/login')
-        .send({
-          email: testUser.email,
-          password: testUser.password,
-        })
-        .expect(200);
-      const refreshToken = loginResponse.body.data.refreshToken;
+      const { refreshToken } = await createUserAndLogin(app);
       const response = await request(app)
         .post('/api/user/refresh')
         .send({ refreshToken })
         .expect(200);
-      console.log('[log]response:', response);
       expect(response.body.message).toBe('Access token refreshed');
       expect(response.body.data.accessToken).toBeDefined();
     });
@@ -287,22 +251,13 @@ describe('Auth Controller', () => {
 
   describe('POST /api/user/password-reset', () => {
     it('should return 404 User not found for non-existing email', async () => {
-      const testUser = generateTestUser();
-      await request(app).post('/api/user/signup').send(testUser).expect(201);
-      const loginResponse = await request(app)
-        .post('/api/user/login')
-        .send({
-          email: testUser.email,
-          password: testUser.password,
-        })
-        .expect(200);
-      const token = loginResponse.body.data.token;
-      await testDb.delete(users).where(eq(users.email, testUser.email));
+      const { token, user } = await createUserAndLogin(app);
+      await testDb.delete(users).where(eq(users.email, user.email));
       const response = await request(app)
         .post('/api/user/reset-password')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          email: testUser.email,
+          email: user.email,
           newPassword: 'NewPass@1234',
         })
         .expect(404);
@@ -310,21 +265,12 @@ describe('Auth Controller', () => {
       expect(response.body.message).toBe('User not found');
     });
     it('should reset password successfully for existing user', async () => {
-      const testUser = generateTestUser();
-      await request(app).post('/api/user/signup').send(testUser).expect(201);
-      const loginResponse = await request(app)
-        .post('/api/user/login')
-        .send({
-          email: testUser.email,
-          password: testUser.password,
-        })
-        .expect(200);
-      const token = loginResponse.body.data.token;
+      const { token, user } = await createUserAndLogin(app);
       const response = await request(app)
         .post('/api/user/reset-password')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          email: testUser.email,
+          email: user.email,
           newPassword: 'NewPass@1234',
         })
         .expect(200);
@@ -332,7 +278,7 @@ describe('Auth Controller', () => {
       const loginWithNewPasswordResponse = await request(app)
         .post('/api/user/login')
         .send({
-          email: testUser.email,
+          email: user.email,
           password: 'NewPass@1234',
         })
         .expect(200);
@@ -341,17 +287,7 @@ describe('Auth Controller', () => {
       );
     });
     it('should return 500 when something went wrong during password reset', async () => {
-      const testUser = generateTestUser();
-      await request(app).post('/api/user/signup').send(testUser).expect(201);
-
-      const loginResponse = await request(app)
-        .post('/api/user/login')
-        .send({
-          email: testUser.email,
-          password: testUser.password,
-        })
-        .expect(200);
-      const token = loginResponse.body.data.token;
+      const { token } = await createUserAndLogin(app);
       const dbSelectSpy = vi.spyOn(testDb, 'select').mockImplementation(() => {
         throw new Error('Database connection failed');
       });
@@ -368,6 +304,17 @@ describe('Auth Controller', () => {
       expect(response.body.message).toBe('Internal Server Error');
       expect(dbSelectSpy).toHaveBeenCalled();
       dbSelectSpy.mockRestore();
+    });
+    it('should return 401 Unauthorized when no token is provided', async () => {
+      const response = await request(app)
+        .post('/api/user/reset-password')
+        .send({
+          email: 'test@gmail.com',
+          newPassword: 'NewPass@1234',
+        })
+        .expect(401);
+      expect(response.body.data).toBeNull();
+      expect(response.body.message).toBe('Unauthorized');
     });
   });
 });

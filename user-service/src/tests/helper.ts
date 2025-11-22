@@ -3,6 +3,8 @@ import { NewUser, users } from '../db/schema';
 import { testDb } from './setup';
 import { hashPassword } from '../utils/password';
 import { eq } from 'drizzle-orm';
+import request from 'supertest';
+import { Express } from 'express';
 
 export const generateTestUser = (): NewUser => ({
   email: faker.internet.email().toLowerCase(),
@@ -15,6 +17,28 @@ export const generateTestUser = (): NewUser => ({
 export const createAuthHeaders = (token: string) => ({
   Authorization: `Bearer ${token}`,
 });
+
+// Helper to create a user and login in one step
+export const createUserAndLogin = async (app: Express) => {
+  const testUser = generateTestUser();
+
+  await request(app).post('/api/user/signup').send(testUser).expect(201);
+
+  const loginResponse = await request(app)
+    .post('/api/user/login')
+    .send({
+      email: testUser.email,
+      password: testUser.password,
+    })
+    .expect(200);
+
+  return {
+    user: testUser,
+    token: loginResponse.body.data.token,
+    refreshToken: loginResponse.body.data.refreshToken,
+    userId: loginResponse.body.data.id,
+  };
+};
 
 // Helper to insert a user directly into the database for testing purposes
 
