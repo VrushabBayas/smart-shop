@@ -11,9 +11,11 @@ export const validateBody = (schema: ZodSchema) => {
     } catch (error) {
       if (error instanceof ZodError) {
         return res.status(400).json({
-          error: 'Invalid request body',
-          details: error.issues.map((issue) => ({
-            field: issue.path,
+          data: null,
+          message: 'Validation failed',
+          errors: error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
           })),
         });
       }

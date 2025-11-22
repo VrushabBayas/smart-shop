@@ -7,34 +7,23 @@ import { Request, Response } from 'express';
 
 export const signUpUser = async (req: Request, res: Response) => {
   try {
-    const { username, password } = req.body || {};
+    const { password } = req.body || {};
     const hashedPassword = await hashPassword(password);
 
-    if (username && hashedPassword) {
-      const [user] = await db
-        .insert(users)
-        .values({
-          ...req.body,
-          password: hashedPassword,
-        })
-        .returning({
-          id: users.id,
-          username: users.username,
-          email: users.email,
-        });
-      const token = await generateToken({
-        username: user?.username || '',
-        id: user?.id || '',
-        email: user?.email || '',
+    await db
+      .insert(users)
+      .values({
+        ...req.body,
+        password: hashedPassword,
+      })
+      .returning({
+        id: users.id,
+        username: users.username,
+        email: users.email,
       });
-      res.status(201).json({
-        data: { message: 'Sign-Up Successful', token, error: null, username },
-      });
-    } else {
-      res
-        .status(400)
-        .json({ data: null, message: 'Username and Password are required' });
-    }
+    res.status(201).json({
+      data: { message: 'Sign-Up Successful', error: null },
+    });
   } catch (error) {
     console.error('Error during sign-up:', error);
     res.status(500).json({ data: null, message: 'Internal Server Error' });
