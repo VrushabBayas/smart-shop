@@ -15,7 +15,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get('/health', (req, res) => {
-  res.send('Server is healthy');
+  res.json({ data: { message: 'Server is healthy' } });
 });
 
 app.use('/api/user', authRouter);

@@ -7,7 +7,7 @@ import { Request, Response } from 'express';
 
 export const signUpUser = async (req: Request, res: Response) => {
   try {
-    const { password } = req.body || {};
+    const { password } = req.body;
     const hashedPassword = await hashPassword(password);
 
     await db

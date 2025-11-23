@@ -165,6 +165,42 @@ describe('Auth Controller', () => {
       expect(response.body.message).toBe('Unauthorized');
     });
 
+    it('should return 400 when incorrect queyr param name provided ', async () => {
+      const { token } = await createUserAndLogin(app);
+      const response = await request(app)
+        .get('/api/user/profile?userId=someId')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(400);
+      expect(response.body.data).toBeNull();
+      expect(response.body.message).toBe('Validation failed');
+      expect(response.body.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            field: 'id',
+            message: 'Invalid input: expected string, received undefined',
+          }),
+        ]),
+      );
+    });
+
+    it('should return 400 Bad Request for invalid UUID format', async () => {
+      const { token } = await createUserAndLogin(app);
+      const response = await request(app)
+        .get('/api/user/profile?id=invalid-uuid')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(400);
+      expect(response.body.data).toBeNull();
+      expect(response.body.message).toBe('Validation failed');
+      expect(response.body.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            field: 'id',
+            message: 'Invalid user ID format',
+          }),
+        ]),
+      );
+    });
+
     it('should return 404 Not Found for non-existing user', async () => {
       const { token, userId, user } = await createUserAndLogin(app);
       // Delete the user directly from the database to simulate non-existence
