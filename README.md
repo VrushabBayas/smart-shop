@@ -210,13 +210,15 @@ curl -X POST http://localhost:8000/api/user/login \
 ```json
 {
   "data": {
-    "message": "Login Successful",
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "error": null,
+    "email": "user@example.com",
+    "id": "uuid-here",
     "username": "testuser",
-    "id": "uuid-here"
-  }
+    "error": null
+  },
+  "message": "Login successful",
+  "error": null
 }
 ```
 
@@ -514,6 +516,67 @@ CORS is enabled globally on Kong with:
 - Credentials: Enabled
 - Max Age: 3600 seconds
 
+## 🧪 Testing
+
+### User Service Tests
+
+The user-service includes comprehensive test coverage using Vitest and Supertest:
+
+**Test Structure:**
+```
+user-service/src/
+├── tests/
+│   ├── app.test.ts              # Server configuration tests
+│   ├── helper.ts                # Test utilities and helpers
+│   └── setup.ts                 # Test database setup and cleanup
+├── controller/
+│   └── authController.test.ts   # Authentication endpoint tests
+└── middleware/
+    └── tests/
+        └── auth.test.ts         # Authentication middleware tests
+```
+
+**Running Tests:**
+
+```bash
+cd user-service
+
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run specific test file
+npm test authController.test.ts
+```
+
+**Test Features:**
+
+- ✅ **20+ test cases** covering all authentication endpoints
+- ✅ **Helper functions** for reducing test boilerplate:
+  - `createUserAndLogin()` - Creates user and returns auth tokens
+  - `generateTestUser()` - Generates random test user data
+  - `insertTestUser()` - Direct database insertion for testing
+- ✅ **Automatic test database cleanup** between tests
+- ✅ **Integration tests** using Supertest for API endpoints
+- ✅ **Unit tests** for middleware and utilities
+- ✅ **Error handling tests** for edge cases
+- ✅ **Validation tests** for request body and query parameters
+
+**Test Coverage:**
+
+- Authentication endpoints (signup, login, refresh, profile, password reset)
+- JWT token generation and verification
+- Password hashing and comparison
+- Query parameter validation middleware
+- Authorization middleware
+- Database connection pool
+- Error handling scenarios
+
 ## 🚧 Future Enhancements
 
 - [x] User authentication with JWT
@@ -527,6 +590,10 @@ CORS is enabled globally on Kong with:
 - [x] Protected routes with authentication middleware
 - [x] JWT token verification middleware
 - [x] User profile endpoint with password exclusion
+- [x] Comprehensive test suite with 20+ test cases
+- [x] Test helper functions for DRY test code
+- [x] Automated test database cleanup
+- [x] Query parameter validation with Zod
 - [ ] Add email verification
 - [ ] Add logout endpoint with token revocation
 - [ ] Implement protected routes in frontend
@@ -538,8 +605,8 @@ CORS is enabled globally on Kong with:
 - [ ] Add rate limiting via Kong
 - [ ] Add monitoring and logging (ELK stack)
 - [ ] Add CI/CD pipeline
-- [ ] Add unit and integration tests
 - [ ] Implement service mesh (Istio/Linkerd)
+- [ ] Add API versioning
 
 ## 🤝 Contributing
 

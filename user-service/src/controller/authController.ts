@@ -68,6 +68,7 @@ export const loginUser = async (req: Request, res: Response) => {
         email: user.email,
         id: user.id,
         refreshToken,
+        username: user.username,
       },
       message: 'Login successful',
       error: null,
