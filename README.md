@@ -5,7 +5,6 @@ A microservices-based e-commerce application built with React, Node.js, Express,
 ## 🏗️ Architecture
 
 This project follows a microservices architecture pattern with the following components:
-A microservices-based e-commerce application built with React, Node.js, Express, and Kong API Gateway.
 
 - Frontend
 - API Gateway → routes all frontend traffic - KONG
@@ -71,13 +70,6 @@ A microservices-based e-commerce application built with React, Node.js, Express,
   - User profile retrieval with password exclusion
   - PostgreSQL database with Drizzle ORM
   - Automatic database migrations on startup
-- **Endpoints**:
-  - `POST /api/user/signup` - User registration
-  - `POST /api/user/login` - User login (returns both tokens)
-  - `POST /api/user/refresh` - Refresh access token using refresh token
-  - `GET /api/user/profile` - Get user profile (requires authentication)
-  - `POST /api/user/reset-password` - Reset user password (requires authentication)
-  - `GET /health` - Health check endpoint
 
 ### Kong API Gateway
 
@@ -110,7 +102,6 @@ A microservices-based e-commerce application built with React, Node.js, Express,
 - **Schema**:
   - `users` table with UUID primary key
   - Email and username unique constraints
-  - Password hashing with bcrypt
   - Refresh token storage (varchar 255)
   - Timestamps for created_at and updated_at
   - First name and last name fields
@@ -230,17 +221,6 @@ curl -X POST http://localhost:8000/api/user/refresh \
   -d '{
     "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }'
-```
-
-**Refresh Response:**
-
-```json
-{
-  "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "message": "Token refreshed"
-  }
-}
 ```
 
 **Get User Profile (Protected):**
@@ -557,25 +537,13 @@ npm test authController.test.ts
 **Test Features:**
 
 - ✅ **20+ test cases** covering all authentication endpoints
-- ✅ **Helper functions** for reducing test boilerplate:
-  - `createUserAndLogin()` - Creates user and returns auth tokens
-  - `generateTestUser()` - Generates random test user data
-  - `insertTestUser()` - Direct database insertion for testing
+- ✅ **Helper functions**: `createUserAndLogin()`, `generateTestUser()`, `insertTestUser()`
 - ✅ **Automatic test database cleanup** between tests
 - ✅ **Integration tests** using Supertest for API endpoints
 - ✅ **Unit tests** for middleware and utilities
-- ✅ **Error handling tests** for edge cases
-- ✅ **Validation tests** for request body and query parameters
+- ✅ **Error handling and validation tests**
 
-**Test Coverage:**
-
-- Authentication endpoints (signup, login, refresh, profile, password reset)
-- JWT token generation and verification
-- Password hashing and comparison
-- Query parameter validation middleware
-- Authorization middleware
-- Database connection pool
-- Error handling scenarios
+**Coverage includes:** Authentication endpoints, JWT tokens, password hashing, query validation, authorization middleware, database connection, and error scenarios
 
 ## 🚧 Future Enhancements
 
