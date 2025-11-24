@@ -32,7 +32,7 @@ This project follows a microservices architecture pattern with the following com
        ▼                   ▼
 ┌─────────────┐     ┌─────────────--┐
 │User Service │     │Future Services│
-│  Port 3000  │     │               │
+│  Port 3001  │     │               │
 └─────────────┘     └─────────────--┘
 ```
 
@@ -422,7 +422,7 @@ All services include health checks:
 
 - **User Service**: `curl http://localhost:3000/health`
 - **Kong Gateway**: `kong health`
-- **Frontend**: `curl http://localhost:80`
+- **Frontend**: `curl http://localhost:8080`
 - **Kong PostgreSQL**: `pg_isready -U kong`
 - **User Service PostgreSQL**: `pg_isready -U userservice`
 
@@ -437,17 +437,7 @@ docker-compose exec user-database psql -U userservice -d smart_shop_userdb
 # From local machine (if psql is installed)
 psql -h localhost -p 5433 -U userservice -d smart_shop_userdb
 ```
-
 Password: `userservice123`
-
-### Useful psql Commands
-
-```sql
-\dt              -- List all tables
-\d users         -- Describe users table
-SELECT * FROM users;  -- View all users
-\q               -- Quit psql
-```
 
 ### Drizzle Studio
 
