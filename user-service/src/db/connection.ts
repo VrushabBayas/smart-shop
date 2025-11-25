@@ -1,10 +1,18 @@
-import env, { isProd } from '../../env';
+import env, { isProd, isTest } from '../../env';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { remember } from '@epic-web/remember';
+
 const createPool = () => {
+  // Use TEST_DATABASE_URL when running tests, otherwise use DATABASE_URL
+  const connectionString = isTest
+    ? env.TEST_DATABASE_URL
+    : isProd
+      ? env.DATABASE_URL
+      : env.DATABASE_URL_DEV || env.DATABASE_URL_DEV;
+
   return new Pool({
-    connectionString: env.DATABASE_URL,
+    connectionString,
   });
 };
 

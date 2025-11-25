@@ -1,6 +1,6 @@
 FROM alpine:latest
 
-RUN apk add --no-cache curl bash
+RUN apk add --no-cache curl bash jq
 
 WORKDIR /app
 

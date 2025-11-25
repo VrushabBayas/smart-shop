@@ -5,7 +5,6 @@ A microservices-based e-commerce application built with React, Node.js, Express,
 ## 🏗️ Architecture
 
 This project follows a microservices architecture pattern with the following components:
-A microservices-based e-commerce application built with React, Node.js, Express, and Kong API Gateway.
 
 - Frontend
 - API Gateway → routes all frontend traffic - KONG
@@ -33,7 +32,7 @@ A microservices-based e-commerce application built with React, Node.js, Express,
        ▼                   ▼
 ┌─────────────┐     ┌─────────────--┐
 │User Service │     │Future Services│
-│  Port 3000  │     │               │
+│  Port 3001  │     │               │
 └─────────────┘     └─────────────--┘
 ```
 
@@ -63,13 +62,14 @@ A microservices-based e-commerce application built with React, Node.js, Express,
 - **Features**:
   - User registration with email/username uniqueness validation
   - Secure password hashing with bcrypt
-  - JWT token-based authentication
+  - JWT token-based authentication with refresh tokens
+  - Access tokens (short-lived: 15 minutes)
+  - Refresh tokens (long-lived: 7 days) stored in database
+  - Token-based authentication middleware
+  - Password reset functionality
+  - User profile retrieval with password exclusion
   - PostgreSQL database with Drizzle ORM
   - Automatic database migrations on startup
-- **Endpoints**:
-  - `POST /api/user/signup` - User registration
-  - `POST /api/user/login` - User login (email/password)
-  - `GET /health` - Health check endpoint
 
 ### Kong API Gateway
 
@@ -102,8 +102,9 @@ A microservices-based e-commerce application built with React, Node.js, Express,
 - **Schema**:
   - `users` table with UUID primary key
   - Email and username unique constraints
-  - Password hashing with bcrypt
+  - Refresh token storage (varchar 255)
   - Timestamps for created_at and updated_at
+  - First name and last name fields
 
 ## 🚀 Getting Started
 
@@ -160,10 +161,13 @@ docker-compose down -v
 
 ### Through Kong Gateway (Recommended)
 
-| Method | Endpoint                              | Description       |
-| ------ | ------------------------------------- | ----------------- |
-| POST   | http://localhost:8000/api/user/signup | User registration |
-| POST   | http://localhost:8000/api/user/login  | User login        |
+| Method | Endpoint                                      | Description          | Auth Required |
+| ------ | --------------------------------------------- | -------------------- | ------------- |
+| POST   | http://localhost:8000/api/user/signup         | User registration    | No            |
+| POST   | http://localhost:8000/api/user/login          | User login           | No            |
+| POST   | http://localhost:8000/api/user/refresh        | Refresh access token | No            |
+| GET    | http://localhost:8000/api/user/profile        | Get user profile     | Yes           |
+| POST   | http://localhost:8000/api/user/reset-password | Reset password       | Yes           |
 
 ### Example Requests
 
@@ -192,17 +196,50 @@ curl -X POST http://localhost:8000/api/user/login \
   }'
 ```
 
-**Response Format:**
+**Login Response Format:**
 
 ```json
 {
   "data": {
-    "message": "Login Successful",
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "error": null,
-    "username": "testuser"
-  }
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "email": "user@example.com",
+    "id": "uuid-here",
+    "username": "testuser",
+    "error": null
+  },
+  "message": "Login successful",
+  "error": null
 }
+```
+
+**Refresh Access Token:**
+
+```bash
+curl -X POST http://localhost:8000/api/user/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }'
+```
+
+**Get User Profile (Protected):**
+
+```bash
+curl -X GET "http://localhost:8000/api/user/profile?id=<user-id>" \
+  -H "Authorization: Bearer <access-token>"
+```
+
+**Reset Password (Protected):**
+
+```bash
+curl -X POST http://localhost:8000/api/user/reset-password \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <access-token>" \
+  -d '{
+    "email": "user@example.com",
+    "newPassword": "NewSecurePass123"
+  }'
 ```
 
 ## 🛠️ Development
@@ -283,15 +320,34 @@ Example usage:
 ```typescript
 import { authService, userService } from './Api';
 
-// Login
+// Login (returns token and refreshToken)
 const response = await authService.login({ email, password });
+// Response: { token, refreshToken, username, id }
+// Tokens are automatically stored in localStorage
 
-// Get user profile
+// Get user profile (uses token automatically via Authorization header)
 const profile = await userService.getCurrentUserProfile();
 
-// Logout
+// Refresh token (automatic via interceptor when access token expires)
+const newToken = await authService.refreshAccessToken();
+
+// Logout (clears tokens from localStorage)
 authService.logout();
 ```
+
+**Token Management:**
+
+The frontend automatically handles token refresh:
+
+- Access tokens expire after 2 hours
+- Refresh tokens expire after 7 days
+- When an API call receives a 401 error, the interceptor automatically:
+  1. Calls the `/refresh` endpoint with the refresh token
+  2. Updates the access token in localStorage
+  3. Retries the original failed request
+- If refresh token is invalid/expired, user is logged out automatically
+- All tokens are stored in localStorage
+- Refresh tokens are stored in the database for validation
 
 **User Service:**
 
@@ -344,9 +400,11 @@ docker-compose restart kong-setup
 - `PORT`: 3001
 - `NODE_ENV`: development
 - `APP_STAGE`: development
-- `JWT_SECRET`: JWT signing secret key
-- `JWT_EXPIRES_IN`: 7d
-- `BCRYPT_SALT_ROUNDS`: 10
+- `JWT_SECRET`: JWT signing secret key for access tokens (min 10 chars)
+- `JWT_EXPIRES_IN`: 2h (access token expiry - default)
+- `REFRESH_JWT_SECRET`: JWT signing secret key for refresh tokens (min 10 chars)
+- `REFRESH_JWT_EXPIRES_IN`: 7d (refresh token expiry - default)
+- `BCRYPT_SALT_ROUNDS`: 12 (default, range: 10-20)
 
 **User Database:**
 
@@ -364,7 +422,7 @@ All services include health checks:
 
 - **User Service**: `curl http://localhost:3000/health`
 - **Kong Gateway**: `kong health`
-- **Frontend**: `curl http://localhost:80`
+- **Frontend**: `curl http://localhost:8080`
 - **Kong PostgreSQL**: `pg_isready -U kong`
 - **User Service PostgreSQL**: `pg_isready -U userservice`
 
@@ -379,17 +437,7 @@ docker-compose exec user-database psql -U userservice -d smart_shop_userdb
 # From local machine (if psql is installed)
 psql -h localhost -p 5433 -U userservice -d smart_shop_userdb
 ```
-
 Password: `userservice123`
-
-### Useful psql Commands
-
-```sql
-\dt              -- List all tables
-\d users         -- Describe users table
-SELECT * FROM users;  -- View all users
-\q               -- Quit psql
-```
 
 ### Drizzle Studio
 
@@ -438,6 +486,55 @@ CORS is enabled globally on Kong with:
 - Credentials: Enabled
 - Max Age: 3600 seconds
 
+## 🧪 Testing
+
+### User Service Tests
+
+The user-service includes comprehensive test coverage using Vitest and Supertest:
+
+**Test Structure:**
+```
+user-service/src/
+├── tests/
+│   ├── app.test.ts              # Server configuration tests
+│   ├── helper.ts                # Test utilities and helpers
+│   └── setup.ts                 # Test database setup and cleanup
+├── controller/
+│   └── authController.test.ts   # Authentication endpoint tests
+└── middleware/
+    └── tests/
+        └── auth.test.ts         # Authentication middleware tests
+```
+
+**Running Tests:**
+
+```bash
+cd user-service
+
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run specific test file
+npm test authController.test.ts
+```
+
+**Test Features:**
+
+- ✅ **20+ test cases** covering all authentication endpoints
+- ✅ **Helper functions**: `createUserAndLogin()`, `generateTestUser()`, `insertTestUser()`
+- ✅ **Automatic test database cleanup** between tests
+- ✅ **Integration tests** using Supertest for API endpoints
+- ✅ **Unit tests** for middleware and utilities
+- ✅ **Error handling and validation tests**
+
+**Coverage includes:** Authentication endpoints, JWT tokens, password hashing, query validation, authorization middleware, database connection, and error scenarios
+
 ## 🚧 Future Enhancements
 
 - [x] User authentication with JWT
@@ -446,9 +543,17 @@ CORS is enabled globally on Kong with:
 - [x] Centralized API service layer in frontend
 - [x] Axios interceptors for authentication
 - [x] Token management with localStorage
+- [x] Refresh token mechanism with automatic token renewal
+- [x] Password reset functionality
+- [x] Protected routes with authentication middleware
+- [x] JWT token verification middleware
+- [x] User profile endpoint with password exclusion
+- [x] Comprehensive test suite with 20+ test cases
+- [x] Test helper functions for DRY test code
+- [x] Automated test database cleanup
+- [x] Query parameter validation with Zod
 - [ ] Add email verification
-- [ ] Add password reset functionality
-- [ ] Add refresh token mechanism
+- [ ] Add logout endpoint with token revocation
 - [ ] Implement protected routes in frontend
 - [ ] Add React Context for global auth state
 - [ ] Add loading states and error boundaries
@@ -458,8 +563,8 @@ CORS is enabled globally on Kong with:
 - [ ] Add rate limiting via Kong
 - [ ] Add monitoring and logging (ELK stack)
 - [ ] Add CI/CD pipeline
-- [ ] Add unit and integration tests
 - [ ] Implement service mesh (Istio/Linkerd)
+- [ ] Add API versioning
 
 ## 🤝 Contributing
 
