@@ -10,4 +10,4 @@ COPY . .
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npm run db:push; npm start"]
+CMD ["sh", "-c", "npm start"]

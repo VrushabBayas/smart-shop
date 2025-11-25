@@ -1,5 +1,6 @@
 import { createSecretKey } from 'node:crypto';
-import { SignJWT } from 'jose';
+import { jwtVerify, SignJWT } from 'jose';
+import env from '../../env';
 
 export interface JwtPayload {
   username: string;
@@ -7,13 +8,37 @@ export interface JwtPayload {
   exp?: number;
   id: string;
   email: string;
+  refreshToken?: string;
 }
 
 export const generateToken = async (payload: JwtPayload): Promise<string> => {
-  const secretKey = createSecretKey('This is my secret key for JWT', 'utf-8');
+  const secretKey = createSecretKey(env.JWT_SECRET, 'utf-8');
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
     .setIssuedAt()
-    .setExpirationTime('2h')
+    .setExpirationTime(env.JWT_EXPIRES_IN)
     .sign(secretKey);
+};
+
+export const verifyToken = async (token: string): Promise<JwtPayload> => {
+  const secretKey = createSecretKey(env.JWT_SECRET, 'utf-8');
+  const { payload } = await jwtVerify(token, secretKey);
+  return payload as unknown as JwtPayload;
+};
+
+export const generateRefreshToken = async (UserId: string): Promise<string> => {
+  const secretKey = createSecretKey(env.REFRESH_JWT_SECRET, 'utf-8');
+  return new SignJWT({ id: UserId })
+    .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+    .setIssuedAt()
+    .setExpirationTime(env.REFRESH_JWT_EXPIRES_IN)
+    .sign(secretKey);
+};
+
+export const verifyRefreshToken = async (
+  token: string,
+): Promise<JwtPayload> => {
+  const secretKey = createSecretKey(env.REFRESH_JWT_SECRET, 'utf-8');
+  const { payload } = await jwtVerify(token, secretKey);
+  return payload as unknown as JwtPayload;
 };

@@ -4,7 +4,8 @@ process.env.APP_STAGE = process.env.APP_STAGE || 'development';
 
 const isProduction = process.env.APP_STAGE === 'production';
 const isDevelopment = process.env.APP_STAGE === 'development';
-const isTesting = process.env.APP_STAGE === 'testing';
+const isTesting =
+  process.env.APP_STAGE === 'testing' || process.env.NODE_ENV === 'test';
 
 if (isDevelopment) {
   loadEnv();
@@ -14,17 +15,27 @@ if (isDevelopment) {
 
 const envSchema = z.object({
   NODE_ENV: z
-    .enum(['development', 'production', 'testing'])
+    .enum(['development', 'production', 'test'])
     .default('development'),
   APP_STAGE: z
-    .enum(['development', 'production', 'testing'])
+    .enum(['development', 'production', 'testing', 'test'])
     .default('development'),
   PORT: z.coerce.number().positive().default(3001),
   DATABASE_URL: z.string().startsWith('postgresql://'),
+  TEST_DATABASE_URL: z.string().startsWith('postgresql://'),
   JWT_SECRET: z
     .string()
     .min(10, 'JWT secret must be at least 32 characters long'),
+  REFRESH_JWT_SECRET: z
+    .string()
+    .min(10, 'Refresh JWT secret must be at least 32 characters long'),
   BCRYPT_SALT_ROUNDS: z.coerce.number().min(10).max(20).default(12),
+  JWT_EXPIRES_IN: z.string().default('15m'),
+  REFRESH_JWT_EXPIRES_IN: z.string().default('7d'),
+  SERVICE_NAME: z.string().default('user-service'),
+  CONSUL_HOST: z.string().optional(),
+  CONSUL_PORT: z.coerce.number().positive().default(8500),
+  DATABASE_URL_DEV: z.string().startsWith('postgresql://').optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
