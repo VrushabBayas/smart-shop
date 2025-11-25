@@ -35,6 +35,7 @@ const envSchema = z.object({
   SERVICE_NAME: z.string().default('user-service'),
   CONSUL_HOST: z.string().optional(),
   CONSUL_PORT: z.coerce.number().positive().default(8500),
+  DATABASE_URL_DEV: z.string().startsWith('postgresql://').optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

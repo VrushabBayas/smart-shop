@@ -1,7 +1,11 @@
 import { eq } from 'drizzle-orm';
 import db from '../db/connection';
 import { users } from '../db/schema';
-import { generateRefreshToken, generateToken } from '../utils/jwt';
+import {
+  generateRefreshToken,
+  generateToken,
+  verifyRefreshToken,
+} from '../utils/jwt';
 import { comparePassword, hashPassword } from '../utils/password';
 import { Request, Response } from 'express';
 
@@ -117,6 +121,13 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
       return res
         .status(400)
         .json({ data: null, message: 'Refresh token is required' });
+    }
+
+    // Verify the refresh token signature
+    try {
+      await verifyRefreshToken(refreshToken);
+    } catch (error) {
+      return res.status(401).json({ data: null, message: 'Invalid token' });
     }
 
     const user = await db

@@ -34,3 +34,11 @@ export const generateRefreshToken = async (UserId: string): Promise<string> => {
     .setExpirationTime(env.REFRESH_JWT_EXPIRES_IN)
     .sign(secretKey);
 };
+
+export const verifyRefreshToken = async (
+  token: string,
+): Promise<JwtPayload> => {
+  const secretKey = createSecretKey(env.REFRESH_JWT_SECRET, 'utf-8');
+  const { payload } = await jwtVerify(token, secretKey);
+  return payload as unknown as JwtPayload;
+};

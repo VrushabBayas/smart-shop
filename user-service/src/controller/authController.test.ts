@@ -270,18 +270,13 @@ describe('Auth Controller', () => {
       expect(response.body.message).toBe('Access token refreshed');
       expect(response.body.data.accessToken).toBeDefined();
     });
-    it('should return 500 when something went wrong during token refresh', async () => {
-      const dbSelectSpy = vi.spyOn(testDb, 'select').mockImplementation(() => {
-        throw new Error('Database connection failed');
-      });
+    it('should return 401 when refresh token is invalid', async () => {
       const response = await request(app)
         .post('/api/user/refresh')
         .send({ refreshToken: 'someInvalidToken' })
-        .expect(500);
+        .expect(401);
       expect(response.body.data).toBeNull();
-      expect(response.body.message).toBe('Internal Server Error');
-      expect(dbSelectSpy).toHaveBeenCalled();
-      dbSelectSpy.mockRestore();
+      expect(response.body.message).toBe('Invalid token');
     });
   });
 

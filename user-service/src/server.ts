@@ -2,7 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import authRouter from './routes/authRoute';
 import helmet from 'helmet';
+import morgan from 'morgan';
 import { deregisterService, registerService } from './consul';
+import { isTest } from '../env';
 const app = express();
 
 registerService().catch((err) => {
@@ -13,6 +15,12 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  morgan('dev', {
+    skip: () => isTest,
+  }),
+);
 
 app.get('/health', (req, res) => {
   res.json({ data: { message: 'Server is healthy' } });
