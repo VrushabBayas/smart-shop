@@ -8,7 +8,7 @@ export default defineConfig({
     clearMocks: true,
     env: {
       NODE_ENV: 'test',
-      APP_STAGE: 'testing',
+      APP_STAGE: 'test',
     },
     coverage: {
       provider: 'v8',
