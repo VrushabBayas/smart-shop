@@ -1,0 +1,144 @@
+name: CI - Pull Request Validation
+
+on:
+  pull_request:
+    branches: [main, develop, staging, uat]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  user-service:
+    name: User Service Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: ss_user_testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: user-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: user-service/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run database migrations
+        run: npm run db:push:test
+        env:
+          TEST_DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/ss_user_testdb
+
+      - name: Run tests
+        run: npm run test:run
+        env:
+          TEST_DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/ss_user_testdb
+          JWT_SECRET: 'test-jwt-secret-for-ci-pipeline'
+          REFRESH_JWT_SECRET: 'test-refresh-jwt-secret-for-ci-pipeline'
+
+      - name: Build
+        run: npm run build
+
+  product-service:
+    name: Product Service Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: productservice
+          POSTGRES_PASSWORD: productservice123
+          POSTGRES_DB: smart_shop_productdb_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: product-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: product-service/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run database migrations
+        run: npm run db:push:test
+        env:
+          TEST_DATABASE_URL: postgresql://productservice:productservice123@localhost:5432/smart_shop_productdb_test
+
+      - name: Seed test database
+        run: npm run db:test:seed
+        env:
+          TEST_DATABASE_URL: postgresql://productservice:productservice123@localhost:5432/smart_shop_productdb_test
+
+      - name: Run tests
+        run: npm run test:run
+        env:
+          TEST_DATABASE_URL: postgresql://productservice:productservice123@localhost:5432/smart_shop_productdb_test
+          JWT_SECRET: 'test-jwt-secret-for-ci-pipeline'
+          REFRESH_JWT_SECRET: 'test-refresh-jwt-secret-for-ci-pipeline'
+
+      - name: Build
+        run: npm run build
+
+  frontend:
+    name: Frontend Build & Lint
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
