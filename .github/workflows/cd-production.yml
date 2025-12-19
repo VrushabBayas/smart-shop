@@ -39,7 +39,7 @@ jobs:
           fi
 
       - name: Build and push User Service
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./user-service
           push: true
@@ -50,7 +50,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push Product Service
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./product-service
           push: true
@@ -61,7 +61,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push Frontend
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./frontend
           push: true
