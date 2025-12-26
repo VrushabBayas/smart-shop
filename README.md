@@ -39,72 +39,31 @@ This project follows a microservices architecture pattern with the following com
 ## 📦 Services
 
 ### Frontend
-
-- **Technology**: React 19 + TypeScript + Vite + Axios
+- **Technology**: React 19 + TypeScript + Vite
 - **Port**: 8080
-- **Description**: Single Page Application (SPA) served via Nginx
-- **Features**:
-  - Modern React with TypeScript
-  - Vite for fast development and optimized builds
-  - Nginx reverse proxy for API calls to Kong Gateway
-  - Axios HTTP client with interceptors
-  - Centralized API service layer
-  - JWT token management with localStorage
-  - Global error handling
-  - Type-safe API calls with TypeScript interfaces
+- **Description**: Single Page Application with centralized API layer
+- **Documentation**: [Frontend README](./frontend/README.md)
 
 ### User Service
-
 - **Technology**: Node.js + Express + TypeScript + Drizzle ORM
-- **Port**: 3000 (exposed from container port 3001)
-- **Database**: PostgreSQL 15 (dedicated instance on port 5433)
-- **Description**: Handles user authentication and management
-- **Features**:
-  - User registration with email/username uniqueness validation
-  - Secure password hashing with bcrypt
-  - JWT token-based authentication with refresh tokens
-  - Access tokens (short-lived: 15 minutes)
-  - Refresh tokens (long-lived: 7 days) stored in database
-  - Token-based authentication middleware
-  - Password reset functionality
-  - User profile retrieval with password exclusion
-  - PostgreSQL database with Drizzle ORM
-  - Automatic database migrations on startup
+- **Port**: 3001 (exposed as 3000)
+- **Database**: PostgreSQL 16 (port 5433)
+- **Description**: Authentication and user management
+- **Documentation**: [User Service README](./user-service/README.md)
+
+### Product Service
+- **Technology**: Node.js + Express + TypeScript + Drizzle ORM
+- **Port**: 3002
+- **Database**: PostgreSQL 16 (port 5434)
+- **Description**: Product catalog, categories, variants, and reviews
+- **Documentation**: [Product Service README](./product-service/README.md)
 
 ### Kong API Gateway
-
 - **Technology**: Kong Gateway 3.4
-- **Ports**:
-  - 8000: Proxy (API requests)
-  - 8001: Admin API
-  - 8443: Proxy SSL
-  - 8444: Admin API SSL
+- **Ports**: 8000 (Proxy), 8001 (Admin)
+- **Database**: PostgreSQL 16 (port 5432)
 - **Description**: Central API Gateway for routing and managing microservices
-- **Features**:
-  - Dynamic service routing
-  - CORS support
-  - Request/response logging
-  - Centralized authentication (ready for plugins)
-
-### Kong Database
-
-- **Technology**: PostgreSQL 15
-- **Port**: 5432
-- **Description**: Stores Kong's configuration and routes
-
-### User Service Database
-
-- **Technology**: PostgreSQL 15
-- **Port**: 5433
-- **Database**: smart_shop_userdb
-- **User**: userservice
-- **Description**: Dedicated PostgreSQL database for user service data
-- **Schema**:
-  - `users` table with UUID primary key
-  - Email and username unique constraints
-  - Refresh token storage (varchar 255)
-  - Timestamps for created_at and updated_at
-  - First name and last name fields
+- **Documentation**: [Kong README](./kong/README.md)
 
 ## 🚀 Getting Started
 
@@ -159,88 +118,16 @@ docker-compose down -v
 
 ## 🔌 API Endpoints
 
-### Through Kong Gateway (Recommended)
+All API requests go through Kong Gateway at `http://localhost:8000`
 
-| Method | Endpoint                                      | Description          | Auth Required |
-| ------ | --------------------------------------------- | -------------------- | ------------- |
-| POST   | http://localhost:8000/api/user/signup         | User registration    | No            |
-| POST   | http://localhost:8000/api/user/login          | User login           | No            |
-| POST   | http://localhost:8000/api/user/refresh        | Refresh access token | No            |
-| GET    | http://localhost:8000/api/user/profile        | Get user profile     | Yes           |
-| POST   | http://localhost:8000/api/user/reset-password | Reset password       | Yes           |
+### Service Endpoints
 
-### Example Requests
+- **User Service**: `/api/user/*` - Authentication and user management
+- **Product Service**: `/api/products/*` - Product catalog management
 
-**Sign Up:**
-
-```bash
-curl -X POST http://localhost:8000/api/user/signup \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "username": "testuser",
-    "password": "SecurePass123",
-    "first_name": "John",
-    "last_name": "Doe"
-  }'
-```
-
-**Login:**
-
-```bash
-curl -X POST http://localhost:8000/api/user/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "SecurePass123"
-  }'
-```
-
-**Login Response Format:**
-
-```json
-{
-  "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "email": "user@example.com",
-    "id": "uuid-here",
-    "username": "testuser",
-    "error": null
-  },
-  "message": "Login successful",
-  "error": null
-}
-```
-
-**Refresh Access Token:**
-
-```bash
-curl -X POST http://localhost:8000/api/user/refresh \
-  -H "Content-Type: application/json" \
-  -d '{
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  }'
-```
-
-**Get User Profile (Protected):**
-
-```bash
-curl -X GET "http://localhost:8000/api/user/profile?id=<user-id>" \
-  -H "Authorization: Bearer <access-token>"
-```
-
-**Reset Password (Protected):**
-
-```bash
-curl -X POST http://localhost:8000/api/user/reset-password \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <access-token>" \
-  -d '{
-    "email": "user@example.com",
-    "newPassword": "NewSecurePass123"
-  }'
-```
+For detailed API documentation, see each service's README:
+- [User Service API Documentation](./user-service/README.md#api-endpoints)
+- [Product Service API Documentation](./product-service/README.md#api-endpoints)
 
 ## 🛠️ Development
 
@@ -248,136 +135,30 @@ curl -X POST http://localhost:8000/api/user/reset-password \
 
 ```
 shop-smart/
-├── docker-compose.yml          # Multi-container orchestration
-├── frontend/                   # React frontend service
-│   ├── Dockerfile
-│   ├── nginx.conf             # Nginx configuration
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── .env                   # Environment variables
-│   └── src/
-│       ├── App.tsx
-│       ├── main.tsx
-│       └── Api/
-│           ├── index.ts       # Main API exports
-│           ├── apiClient.ts   # Axios instance with interceptors
-│           └── services/
-│               ├── authService.ts    # Authentication endpoints
-│               ├── userService.ts    # User-related endpoints
-│               └── index.ts          # Service exports
-├── user-service/              # User microservice
-│   ├── Dockerfile
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── drizzle.config.ts      # Drizzle ORM configuration
-│   ├── env.ts                 # Environment validation with Zod
-│   └── src/
-│       ├── app.ts             # Server entry point
-│       ├── server.ts          # Express app configuration
-│       ├── controller/
-│       │   └── authController.ts   # Authentication logic
-│       ├── db/
-│       │   ├── connection.ts  # Database connection
-│       │   └── schema.ts      # User table schema
-│       ├── routes/
-│       │   └── authRoute.ts   # Authentication routes
-│       └── utils/
-│           ├── jwt.ts         # JWT token generation
-│           └── password.ts    # Password hashing & comparison
-└── kong/                      # Kong API Gateway setup
-    ├── Dockerfile
-    └── setup.sh               # Kong route configuration
+├── docker-compose.yml              # Multi-container orchestration
+├── README.md                       # This file
+├── frontend/                       # React frontend service
+│   ├── README.md                   # Frontend documentation
+│   └── ...
+├── user-service/                   # Authentication microservice
+│   ├── README.md                   # User service documentation
+│   └── ...
+├── product-service/                # Product catalog microservice
+│   ├── README.md                   # Product service documentation
+│   └── ...
+└── kong/                           # API Gateway
+    ├── README.md                   # Kong documentation
+    └── ...
 ```
 
 ### Local Development
 
-**Frontend:**
+Each service can be developed independently. See individual service READMEs for detailed instructions:
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-**Frontend Environment Setup:**
-
-Create a `.env` file in the frontend directory:
-
-```env
-VITE_API_URL=http://localhost:8000
-```
-
-**Frontend API Architecture:**
-
-The frontend uses a centralized API service layer:
-
-- **apiClient.ts**: Axios instance with request/response interceptors
-- **authService.ts**: Login, signup, logout, token management
-- **userService.ts**: User profile and user-related operations
-
-Example usage:
-
-```typescript
-import { authService, userService } from './Api';
-
-// Login (returns token and refreshToken)
-const response = await authService.login({ email, password });
-// Response: { token, refreshToken, username, id }
-// Tokens are automatically stored in localStorage
-
-// Get user profile (uses token automatically via Authorization header)
-const profile = await userService.getCurrentUserProfile();
-
-// Refresh token (automatic via interceptor when access token expires)
-const newToken = await authService.refreshAccessToken();
-
-// Logout (clears tokens from localStorage)
-authService.logout();
-```
-
-**Token Management:**
-
-The frontend automatically handles token refresh:
-
-- Access tokens expire after 2 hours
-- Refresh tokens expire after 7 days
-- When an API call receives a 401 error, the interceptor automatically:
-  1. Calls the `/refresh` endpoint with the refresh token
-  2. Updates the access token in localStorage
-  3. Retries the original failed request
-- If refresh token is invalid/expired, user is logged out automatically
-- All tokens are stored in localStorage
-- Refresh tokens are stored in the database for validation
-
-**User Service:**
-
-```bash
-cd user-service
-npm install
-npm start
-```
-
-### Adding New Routes to Kong
-
-Edit `kong/setup.sh` and add your service configuration:
-
-```bash
-# Create service
-curl -X POST ${KONG_ADMIN_URL}/services \
-  --data name=your-service \
-  --data url=http://your-service:port
-
-# Create route
-curl -X POST ${KONG_ADMIN_URL}/services/your-service/routes \
-  --data "paths[]=/api/your-path" \
-  --data "strip_path=false"
-```
-
-Then restart the kong-setup service:
-
-```bash
-docker-compose restart kong-setup
-```
+- [Frontend Development Guide](./frontend/README.md)
+- [User Service Development Guide](./user-service/README.md)
+- [Product Service Development Guide](./product-service/README.md)
+- [Kong Gateway Setup](./kong/README.md)
 
 ## 🔧 Configuration
 
@@ -428,45 +209,15 @@ All services include health checks:
 
 ## 🗄️ Database Management
 
-### Access User Service Database
+Each service has its own PostgreSQL database:
 
-```bash
-# Using docker-compose
-docker-compose exec user-database psql -U userservice -d smart_shop_userdb
+- **Kong Database**: Port 5432
+- **User Service Database**: Port 5433
+- **Product Service Database**: Port 5434
 
-# From local machine (if psql is installed)
-psql -h localhost -p 5433 -U userservice -d smart_shop_userdb
-```
-Password: `userservice123`
-
-### Drizzle Studio
-
-Run Drizzle Studio to visualize and manage your database:
-
-```bash
-cd user-service
-npm run db:studio
-```
-
-Make sure your local `.env` file points to `localhost:5433` for local access:
-
-```env
-DATABASE_URL=postgresql://userservice:userservice123@localhost:5433/smart_shop_userdb
-```
-
-### Database Migrations
-
-Migrations run automatically on container startup via:
-
-```bash
-npm run db:push
-```
-
-To run migrations manually:
-
-```bash
-docker-compose exec user-service npm run db:push
-```
+For detailed database management instructions, see:
+- [User Service Database Guide](./user-service/README.md#database-management)
+- [Product Service Database Guide](./product-service/README.md#database-management)
 
 ## 📝 Notes
 
@@ -488,52 +239,10 @@ CORS is enabled globally on Kong with:
 
 ## 🧪 Testing
 
-### User Service Tests
+Each service includes comprehensive test coverage. For testing instructions:
 
-The user-service includes comprehensive test coverage using Vitest and Supertest:
-
-**Test Structure:**
-```
-user-service/src/
-├── tests/
-│   ├── app.test.ts              # Server configuration tests
-│   ├── helper.ts                # Test utilities and helpers
-│   └── setup.ts                 # Test database setup and cleanup
-├── controller/
-│   └── authController.test.ts   # Authentication endpoint tests
-└── middleware/
-    └── tests/
-        └── auth.test.ts         # Authentication middleware tests
-```
-
-**Running Tests:**
-
-```bash
-cd user-service
-
-# Run all tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run tests with coverage
-npm run test:coverage
-
-# Run specific test file
-npm test authController.test.ts
-```
-
-**Test Features:**
-
-- ✅ **20+ test cases** covering all authentication endpoints
-- ✅ **Helper functions**: `createUserAndLogin()`, `generateTestUser()`, `insertTestUser()`
-- ✅ **Automatic test database cleanup** between tests
-- ✅ **Integration tests** using Supertest for API endpoints
-- ✅ **Unit tests** for middleware and utilities
-- ✅ **Error handling and validation tests**
-
-**Coverage includes:** Authentication endpoints, JWT tokens, password hashing, query validation, authorization middleware, database connection, and error scenarios
+- [User Service Tests](./user-service/README.md#testing)
+- [Product Service Tests](./product-service/README.md#testing)
 
 ## 🚧 Future Enhancements
 
